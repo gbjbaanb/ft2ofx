@@ -26,7 +26,10 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="csv2ofx.cpp">
+    <ClCompile Include="MoneyImporterFT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Curl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

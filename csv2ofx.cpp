@@ -23,7 +23,9 @@ using namespace std;
 #include <boost/format.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-#include <rpc.h>
+//#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 
 
@@ -139,10 +141,8 @@ void generateOFX(string filename, list<StockData> columns)
 		string strNow;
 		strNow = str(boost::format("%04d%02d%02d%02d%02d%02d") % (tmnow.tm_year + 1900) % (tmnow.tm_mon + 1) % tmnow.tm_mday % tmnow.tm_hour % tmnow.tm_min % tmnow.tm_sec);
 
-		UUID uuid;
-		UuidCreate(&uuid);
-		RPC_CSTR strUuid;
-		UuidToStringA(&uuid, &strUuid);
+		boost::uuids::random_generator gen;
+		boost::uuids::uuid uuid = gen();
 
 		// emit some preamble
 		fout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl
@@ -161,7 +161,7 @@ void generateOFX(string filename, list<StockData> columns)
 			<< "  </SIGNONMSGSRSV1>" << endl
 			<< "  <INVSTMTMSGSRSV1>" << endl
 			<< "    <INVSTMTTRNRS>" << endl
-			<< "      <TRNUID>" << strUuid << "</TRNUID>" << endl
+			<< "      <TRNUID>" << to_string(uuid) << "</TRNUID>" << endl
 			<< "      <STATUS>" << endl
 			<< "        <CODE>0</CODE>" << endl
 			<< "        <SEVERITY>INFO</SEVERITY>" << endl
@@ -251,10 +251,9 @@ void generateOFX(string filename, list<StockData> columns)
 		fout << "    </SECLIST>" << endl
 			<< "  </SECLISTMSGSRSV1>" << endl
 			<< "</OFX>";
-
-		RpcStringFreeA(&strUuid);
 	}
 }
+
 
 
 
@@ -288,9 +287,22 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		g_debug = vm["debug"].as<bool>();
 
-		// lets convert this data
-		list<StockData> columns = parseFile(vm["file"].as<string>(), 
-											vm["colsym"].as<int>(), vm["colcurrency"].as<int>(), vm["colprice"].as<int>(), vm["colname"].as<int>(), vm["colfund"].as<int>());
+		list<StockData> columns;
+		if (vm.count("file"))
+		{
+			// lets convert this data
+			columns = parseFile(vm["file"].as<string>(),
+				vm["colsym"].as<int>(), vm["colcurrency"].as<int>(), vm["colprice"].as<int>(), vm["colname"].as<int>(), vm["colfund"].as<int>());
+		}
+		else
+		{
+			MemoryStruct csv;
+			DownloadFile(vm["url"].as<string>(), csv);
+			// lets convert this data
+			columns = parseFile(vm["file"].as<string>(),
+				vm["colsym"].as<int>(), vm["colcurrency"].as<int>(), vm["colprice"].as<int>(), vm["colname"].as<int>(), vm["colfund"].as<int>());
+		}
+
 		if (columns.size() > 0)
 		{
 			if (g_debug)

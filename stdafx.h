@@ -10,5 +10,14 @@
 #include <stdio.h>
 #include <tchar.h>
 
+#include <string>
 
 
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
+
+
+int DownloadFile(std::string url, struct MemoryStruct& csv);
