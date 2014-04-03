@@ -34,7 +34,7 @@ bool g_debug = false;
 struct StockData
 {
 	string symbol, currency, price, name;
-	bool fund;
+	bool fund = false;
 };
 
 
@@ -273,7 +273,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			("colsym", po::value<int>(), "set column in csv to read symbol from")
 			("colcurrency", po::value<int>(), "set column in csv to read currency from")
 			("colprice", po::value<int>(), "set column in csv to read price from")
-			("colfund", po::value<int>(), "set column in csv to select managed fund")
+			("colfund", po::value<int>()->default_value(-1), "set column in csv to select managed fund")
 			("debug", po::value<bool>()->default_value(false), "turns on debugging to console")
 			;
 
