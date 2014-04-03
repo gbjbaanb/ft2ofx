@@ -109,6 +109,7 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 				// if the price is given in pence, convert it to pounds that's required for import
 				if (sd.currency == "GBX")
 				{
+					sd.currency = "GBP";
 					double gbp = stod(sd.price);
 					gbp /= 100;
 					sd.price = to_string(gbp);
