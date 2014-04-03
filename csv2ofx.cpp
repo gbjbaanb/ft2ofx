@@ -33,7 +33,8 @@ bool g_debug = false;
 // structure to hold the columns from the csv we want
 struct StockData
 {
-	string symbol, currency, price, name;
+	string symbol, currency, name;
+	double price;
 	bool fund = false;
 };
 
@@ -59,6 +60,7 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 		while (!fin.eof())
 		{
 			getline(fin, line, eol_ch);
+
 			StockData sd;
 
 			boost::tokenizer<boost::escaped_list_separator<char> > tok(line, boost::escaped_list_separator<char>('\\', ',', '\"'));
@@ -71,8 +73,9 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 					sd.currency = *it;
 				else if (col == price)
 				{
-					sd.price = *it;
-					sd.price.erase(std::remove(sd.price.begin(), sd.price.end(), ','), sd.price.end());
+					string price = *it;
+					price.erase(std::remove(price.begin(), price.end(), ','), price.end());
+					sd.price = stod(price);
 				}
 				else if (col == name)
 				{
@@ -92,6 +95,11 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 					}
 				}
 			}
+
+			// no symbol - nothing we can do.
+			if (sd.symbol.empty())
+				continue;
+
 			if (g_debug)
 			{
 				cout << sd.symbol << " " << sd.price << " " << sd.currency;
@@ -99,10 +107,9 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 					cout << " (F)";
 			}
 
-			if (sd.symbol.empty() || sd.currency.empty() || sd.price.empty() || sd.price[0] == '0' || sd.price == "n/a")
+			if (sd.currency.empty() || sd.price == 0)
 			{
-				if (g_debug)
-					cout << "   no data  " << endl;
+				cout << "   no price data  " << endl;
 			}
 			else
 			{
@@ -110,9 +117,7 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 				if (sd.currency == "GBX")
 				{
 					sd.currency = "GBP";
-					double gbp = stod(sd.price);
-					gbp /= 100;
-					sd.price = to_string(gbp);
+					sd.price /= 100;
 					if (g_debug)
 						cout << "  -- converting price to " << sd.price << endl;
 				}
@@ -191,9 +196,9 @@ void generateOFX(string filename, list<StockData> columns)
 				<< "              </SECID>" << endl
 				<< "              <HELDINACCT>OTHER</HELDINACCT>" << endl
 				<< "              <POSTYPE>LONG</POSTYPE>" << endl
-				<< "              <UNITS>0.000</UNITS>" << endl
+				<< "              <UNITS>0.025</UNITS>" << endl
 				<< "              <UNITPRICE>" << i.price << "</UNITPRICE>" << endl
-				<< "              <MKTVAL>0.00</MKTVAL>" << endl
+				<< "              <MKTVAL>" << i.price * 0.025 << "</MKTVAL>" << endl
 				<< "              <DTPRICEASOF>" << strNow << "</DTPRICEASOF>" << endl
 				<< "              <CURRENCY>" << endl
 				<< "                <CURRATE>1.00</CURRATE>" << endl
