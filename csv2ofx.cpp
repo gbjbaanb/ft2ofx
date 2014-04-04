@@ -132,7 +132,7 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 
 
 // generates standard OFX from list of data in list
-void generateOFX(string filename, list<StockData> columns)
+void generateOFX(string filename, list<StockData> columns, double addshares, bool stripsuffix)
 {
 	ofstream fout(filename + ".ofx", std::ios::out);
 	if (!fout.fail())
@@ -184,6 +184,13 @@ void generateOFX(string filename, list<StockData> columns)
 		// emit a 'posstock' block for each stock
 		for (StockData& i : columns)
 		{
+			// strip :LSE or :GBX off the symbols, if configured
+			if (stripsuffix)
+			{
+				if (i.symbol.find_last_of(':') != std::string::npos)
+					i.symbol.erase(i.symbol.find_last_of(':'));
+			}
+
 			if (i.fund)
 				fout << "          <POSMF>" << endl;
 			else
@@ -196,9 +203,9 @@ void generateOFX(string filename, list<StockData> columns)
 				<< "              </SECID>" << endl
 				<< "              <HELDINACCT>OTHER</HELDINACCT>" << endl
 				<< "              <POSTYPE>LONG</POSTYPE>" << endl
-				<< "              <UNITS>0.025</UNITS>" << endl
+				<< "              <UNITS>" << addshares << "</UNITS>" << endl
 				<< "              <UNITPRICE>" << i.price << "</UNITPRICE>" << endl
-				<< "              <MKTVAL>" << i.price * 0.025 << "</MKTVAL>" << endl
+				<< "              <MKTVAL>" << i.price * addshares << "</MKTVAL>" << endl
 				<< "              <DTPRICEASOF>" << strNow << "</DTPRICEASOF>" << endl
 				<< "              <CURRENCY>" << endl
 				<< "                <CURRATE>1.00</CURRATE>" << endl
@@ -274,12 +281,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		desc.add_options()
 			("help", "produce help message")
 			("file", po::value<string>()->default_value(""), "set downloaded csv file")
-			("url", po::value<string>()->default_value(""), "set url to auto-download csv")
+//			("url", po::value<string>()->default_value(""), "set url to auto-download csv")
+			("addshares", po::value<double>()->default_value(0.0), "sets each entry to this number of shares (eg 0.025), default 0")
+			("stripsuffix", po::value<bool>()->default_value(false), "strips :LSE or :GBX or similar off symbols, default leave")
 			("colname", po::value<int>(), "set column in csv to read stock name from")
 			("colsym", po::value<int>(), "set column in csv to read symbol from")
 			("colcurrency", po::value<int>(), "set column in csv to read currency from")
 			("colprice", po::value<int>(), "set column in csv to read price from")
-			("colfund", po::value<int>()->default_value(-1), "set column in csv to select managed fund")
+			("colfund", po::value<int>()->default_value(-1), "set column in csv to select managed fund, default notused.")
 			("debug", po::value<bool>()->default_value(false), "turns on debugging to console")
 			;
 
@@ -304,7 +313,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 			// turn it into an ofx in the same directory as the source
 			string outputfile = vm["file"].as<string>();
-			generateOFX(outputfile.substr(0, outputfile.find_last_of('.')), columns);
+			generateOFX(outputfile.substr(0, outputfile.find_last_of('.')), columns, vm["addshares"].as<double>(), vm["stripsuffix"].as<bool>());
 		}
 	}
 	catch (exception& e) {
