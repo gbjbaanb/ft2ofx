@@ -22,6 +22,7 @@ using namespace std;
 #include <boost/tokenizer.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/find.hpp>
 
 #include <rpc.h>
 
@@ -282,7 +283,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			("help", "produce help message")
 			("file", po::value<string>()->default_value(""), "set downloaded csv file")
 //			("url", po::value<string>()->default_value(""), "set url to auto-download csv")
-			("addshares", po::value<double>()->default_value(0.0), "sets each entry to this number of shares (eg 0.025), default 0")
+			("addshares", po::value<double>()->default_value(0.0), "sets each entry to this number of shares (eg 0.001), default 0")
 			("stripsuffix", po::value<bool>()->default_value(false), "strips :LSE or :GBX or similar off symbols, default leave")
 			("colname", po::value<int>(), "set column in csv to read stock name from")
 			("colsym", po::value<int>(), "set column in csv to read symbol from")
@@ -292,6 +293,14 @@ int _tmain(int argc, _TCHAR* argv[])
 			("debug", po::value<bool>()->default_value(false), "turns on debugging to console")
 			;
 
+		const _TCHAR* config_filename = "csv2ofx.config";
+		try
+		{
+			po::store(po::parse_config_file<_TCHAR>(config_filename, desc), vm);
+		}
+		catch (boost::program_options::error)
+		{
+		}
 		po::store(po::parse_command_line(argc, argv, desc), vm);
 		po::notify(vm);
 
@@ -302,6 +311,30 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 
 		g_debug = vm["debug"].as<bool>();
+
+		if (vm["addshares"].as<double>())
+		{
+			{
+				ifstream config(config_filename);
+				ofstream config_out("csv2ofx.temp");
+				if (config.fail())
+					config_out << "addshares=" << vm["addshares"].as<double>() + 0.001 << endl;
+				else
+				{
+					while (!config.eof())
+					{
+						string line;
+						getline(config, line);
+						if (boost::find_first(line, "addshares"))
+							config_out << "addshares=" << vm["addshares"].as<double>() + 0.001 << endl;
+						else
+							config_out << line;
+					}
+				}
+			}
+			remove(config_filename);
+			rename("csv2ofx.temp", config_filename);
+		}
 
 		// lets convert this data
 		list<StockData> columns = parseFile(vm["file"].as<string>(), 
