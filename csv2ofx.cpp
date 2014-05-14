@@ -62,67 +62,75 @@ list<StockData> parseFile(string filename, int symbol, int currency, int price, 
 		{
 			getline(fin, line, eol_ch);
 
-			StockData sd;
-
-			boost::tokenizer<boost::escaped_list_separator<char> > tok(line, boost::escaped_list_separator<char>('\\', ',', '\"'));
-			boost::tokenizer<boost::escaped_list_separator<char> >::iterator it = tok.begin();
-			for (size_t col = 0; it != tok.end(); col++, ++it)
+			try
 			{
-				if (col == symbol)
-					sd.symbol = *it;
-				else if (col == currency)
-					sd.currency = *it;
-				else if (col == price)
+				StockData sd;
+
+				boost::tokenizer<boost::escaped_list_separator<char> > tok(line, boost::escaped_list_separator<char>('\\', ',', '\"'));
+				boost::tokenizer<boost::escaped_list_separator<char> >::iterator it = tok.begin();
+				for (size_t col = 0; it != tok.end(); col++, ++it)
 				{
-					string price = *it;
-					price.erase(std::remove(price.begin(), price.end(), ','), price.end());
-					sd.price = stod(price);
-				}
-				else if (col == name)
-				{
-					sd.name = *it;
-					boost::replace_all(sd.name, "&", "&amp;");
-				}
-				else if (col == fund)
-				{
-					try
+					if (col == symbol)
+						sd.symbol = *it;
+					else if (col == currency)
+						sd.currency = *it;
+					else if (col == price)
 					{
-						if (boost::lexical_cast<int>(*it) != 0)
-							sd.fund = true;
+						string price = *it;
+						price.erase(std::remove(price.begin(), price.end(), ','), price.end());
+						sd.price = stod(price);
 					}
-					catch (boost::bad_lexical_cast const& e)
+					else if (col == name)
 					{
-						sd.fund = false;
+						sd.name = *it;
+						boost::replace_all(sd.name, "&", "&amp;");
+					}
+					else if (col == fund)
+					{
+						try
+						{
+							if (boost::lexical_cast<int>(*it) != 0)
+								sd.fund = true;
+						}
+						catch (boost::bad_lexical_cast const& e)
+						{
+							sd.fund = false;
+						}
 					}
 				}
-			}
 
-			// no symbol - nothing we can do.
-			if (sd.symbol.empty())
-				continue;
+				// no symbol - nothing we can do.
+				if (sd.symbol.empty())
+					continue;
 
-			if (g_debug)
-			{
-				cout << sd.symbol << " " << sd.price << " " << sd.currency;
-				if (sd.fund)
-					cout << " (F)";
-			}
-
-			if (sd.currency.empty() || sd.price == 0)
-			{
-				cout << "   no price data  " << endl;
-			}
-			else
-			{
-				// if the price is given in pence, convert it to pounds that's required for import
-				if (sd.currency == "GBX")
+				if (g_debug)
 				{
-					sd.currency = "GBP";
-					sd.price /= 100;
-					if (g_debug)
-						cout << "  -- converting price to " << sd.price << endl;
+					cout << sd.symbol << " " << sd.price << " " << sd.currency;
+					if (sd.fund)
+						cout << " (F)";
 				}
-				columns.push_back(sd);
+
+				if (sd.currency.empty() || sd.price == 0)
+				{
+					cout << "   no price data  " << endl;
+				}
+				else
+				{
+					// if the price is given in pence, convert it to pounds that's required for import
+					if (sd.currency == "GBX")
+					{
+						sd.currency = "GBP";
+						sd.price /= 100;
+						if (g_debug)
+							cout << "  -- converting price to " << sd.price << endl;
+					}
+					columns.push_back(sd);
+				}
+			}
+			catch (...)
+			{
+				if (g_debug)
+					cout << "error reading line: " << line << endl;
 			}
 		}
 		fin.close();
